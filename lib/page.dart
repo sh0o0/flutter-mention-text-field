@@ -10,11 +10,10 @@ class MyPage extends StatefulWidget {
 
 class _MyPageState extends State<MyPage> {
   static const _mentions = [
-    Mention(userId: '1', name: 'Alice'),
+    Mention(userId: '1', name: 'Alice', style: TextStyle(color: Colors.red)),
     Mention(userId: '2', name: 'Bob'),
     Mention(userId: '3', name: 'Charlie'),
   ];
-
 
   final _controller = MentionTextEditingController(mentions: _mentions);
 
@@ -23,7 +22,6 @@ class _MyPageState extends State<MyPage> {
     _controller.dispose();
     super.dispose();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +39,15 @@ class _MyPageState extends State<MyPage> {
             hintText: 'Type here...',
           ),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          _controller.mentions = [
+            ..._controller.mentions,
+            const Mention(userId: '4', name: 'David'),
+          ];
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }

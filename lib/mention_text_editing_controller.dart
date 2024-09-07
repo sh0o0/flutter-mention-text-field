@@ -2,7 +2,10 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 
-const zeroSpaceText = '\u200b';
+// TODO: メンションの後に１つ見えない文字ができてしまい、左にカーソルを移動すると一度目は動かない
+// TODO: メンションの途中から削除すると、実テキストと噛み合わせない
+
+const zeroSpaceString = '\u200b';
 
 class Mention {
   const Mention({
@@ -25,12 +28,14 @@ class MentionTextEditingController extends TextEditingController {
   List<Mention> _mentions;
 
   List<Mention> get mentions => _mentions;
-
   set mentions(List<Mention> value) {
     _mentions = value;
     notifyListeners();
   }
 
+  static final _mentionRegExp = RegExp(r'@([a-zA-Z0-9_]+)(\u200b*)');
+
+  // 描画をカスタム
   @override
   TextSpan buildTextSpan({
     BuildContext? context,
@@ -40,17 +45,17 @@ class MentionTextEditingController extends TextEditingController {
     final children = <InlineSpan>[];
 
     text.splitMapJoin(
-      RegExp(r'@([a-zA-Z0-9_]+)(\u200b*)'),
+      _mentionRegExp,
       onMatch: (Match match) {
         final allWords = match[0]!;
         final userId = match[1]!;
-        final emptyWords = match[2]!;
-        final annotation = allWords.replaceAll(emptyWords, '');
+        final zeroSpaceText = match[2]!;
+        final mentionText = allWords.replaceAll(zeroSpaceText, '');
 
         log(
-          'annotation: $annotation, userId: $userId, '
-          'emptyWordsLength: ${emptyWords.length}, '
-          'text: $text, ',
+          'mentionText: $mentionText, userId: $userId, '
+          'zeroSpaceTextLength: ${zeroSpaceText.length}, '
+          'text: $text',
         );
 
         final mentionIndex = mentions.indexWhere(
@@ -58,11 +63,7 @@ class MentionTextEditingController extends TextEditingController {
         );
 
         if (mentionIndex == -1) {
-          if (_willRemoveAnnotationUserId(userId)) {
-            _removeRangeTextAfterBuild(match.start, match.end);
-            return '';
-          }
-          children.add(TextSpan(text: annotation, style: style));
+          children.add(TextSpan(text: mentionText, style: style));
           return '';
         }
 
@@ -75,20 +76,20 @@ class MentionTextEditingController extends TextEditingController {
         final differentLength = allWords.length - mention.name.length;
         log(
           'allWordsLength: ${allWords.length}, '
-          'annotationLength: ${annotation.length}, '
+          'mentionTextLength: ${mentionText.length}, '
           'displayLength: ${mention.name.length}, '
           'differentLength: $differentLength, '
           'matchStart: ${match.start}, matchEnd: ${match.end}, ',
         );
 
         // annotationを消そうとしてると判断し、annotationを全削除
-        if (differentLength == 0 && emptyWords.isNotEmpty) {
+        if (differentLength == 0 && zeroSpaceText.isNotEmpty) {
           _removeRangeTextAfterBuild(match.start, match.end);
           return '';
         }
 
         if (differentLength < 0) {
-          if (emptyWords.isNotEmpty) {
+          if (zeroSpaceText.isNotEmpty) {
             _removeRangeTextAfterBuild(match.start, match.end);
             return '';
           }
@@ -97,13 +98,13 @@ class MentionTextEditingController extends TextEditingController {
             match.end,
             // +1してるのは、differentLengthが-1の時に、最後の\u200bを削除すると再度この_replaceRangeTextAfterBuildが走ってしまうため。
             // +1して、\u200bが2つ以上になるようにし、differentLength == 0 && emptyWords.isNotEmptyの時に、annotationを全削除するようにしてる。
-            annotation + zeroSpaceText * (differentLength.abs() + 1),
+            mentionText + zeroSpaceString * (differentLength.abs() + 1),
           );
           children.add(
             TextSpan(
-              style: style,
+              style: mention.style,
               children: [
-                TextSpan(text: annotation),
+                TextSpan(text: mentionText),
                 // 上述の\u200b +1の分
                 const WidgetSpan(child: SizedBox()),
               ],
@@ -148,8 +149,4 @@ class MentionTextEditingController extends TextEditingController {
       text = text.replaceRange(start, end, '');
     });
   }
-
-  bool _willRemoveAnnotationUserId(String removingUserId) =>
-      removingUserId.length > 25 &&
-      mentions.any((e) => e.userId.contains(removingUserId));
 }
