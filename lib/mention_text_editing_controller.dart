@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 // TODO: メンションの後に１つ見えない文字ができてしまい、左にカーソルを移動すると一度目は動かない
 // TODO: メンションの途中から削除すると、実テキストと噛み合わせない
+// TODO: 外部からtextを参照したときに、zeroSpaceはトリムしたい
 
 const zeroSpaceString = '\u200b';
 
